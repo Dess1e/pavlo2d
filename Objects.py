@@ -1,5 +1,6 @@
 import pygame
 import sys
+from random import randrange
 from math import sqrt
 from main import global_vars
 
@@ -20,12 +21,12 @@ class Actor(pygame.sprite.Sprite):
     def set_coords(self, x, y):
         self.coords[0] = x
         self.coords[1] = y
-        self.rect = self.rect.move_ip(x, y)
+        self.rect.x, self.rect.y = x, y
 
     def get_rect(self):
         return self.img.get_rect()
 
-    def render(self, screen):
+    def draw(self, screen):
         screen.blit(self.img, self.rect)
 
     def check_collision(self, group, dokill=False, collided=None):
@@ -45,11 +46,6 @@ class Player(Actor):
         if self.rect.x > global_vars['WIDTH'] - 32:
             return
         self.move(+delta, 0)
-
-    # def check_collision(self, group, dokill=False, collided=None):
-    #     col = pygame.sprite.spritecollide(self, group, dokill, collided)
-    #     if col:
-    #         sys.exit()
 
 
 class PhysicsPlayer(Player):
@@ -76,22 +72,53 @@ class PhysicsPlayer(Player):
 
 
 class Block(Actor):
+    SPEED = 250
+    SPEED_DIFF_COEF = 5
+
     def __init__(self, *args):
         super().__init__(*args)
+        self.speed = self.SPEED + randrange(-self.SPEED // self.SPEED_DIFF_COEF,
+                                            self.SPEED // self.SPEED_DIFF_COEF)
 
     def tick(self, delta_time):
-        delta_y = delta_time * 250
+        delta_y = delta_time * self.speed
         self.move(0, delta_y)
         if self.rect.y > global_vars['HEIGHT']:
             self.kill()
 
 
-class FullscreenText(pygame.font.Font):
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.surface = self.render('TU PROEBAV', True, (255,255,255))
+class Text:
+    def __init__(self, size, color=(255, 255, 255), name=None, pos=(0, 0), text=''):
+        if not name:
+            self.name = pygame.font.get_default_font()
+        else:
+            self.name = name
+        self.size = size
+        self.pos = pos
+        self.color = color
+        self.font = pygame.font.SysFont(name, size)
+        self.surface = self.font.render(text, True, color)
+
+    def render_surface(self, text):
+        self.surface = self.font.render(text, True, self.color)
 
     def draw(self, screen):
-        screen.blit(self.surface, self.get_rect())
+        screen.blit(self.surface, self.pos)
+
+    def tick(self, delta):
+        ...
 
 
+class GameOverText(Text):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.render_surface('TU PROEBAV')
+
+
+class ScoreText(Text):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.score = 0
+
+    def tick(self, delta):
+        self.render_surface('Score: {}'.format(self.score))
